@@ -1,7 +1,7 @@
 telegram:
-  bot_token: "8354951353:AAHZJcXVBBNgE-LEmlMWA2AFPX14zzMLuwU"
+  bot_token: ""  # 从 @BotFather 获取，或设置环境变量 TELEGRAM_BOT_TOKEN
   allowed_user_ids:
-    - 8283571774
+    - 0  # 你的 Telegram User ID，从 @userinfobot 获取
 
 proxy:
   host: "127.0.0.1"
@@ -9,7 +9,7 @@ proxy:
   type: "http"
 
 claude:
-  default_mode: "acceptEdits"
+  default_mode: "acceptEdits"  # plan / acceptEdits / bypassPermissions
   timeout: 300
   default_cwd: "~"
 

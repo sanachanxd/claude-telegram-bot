@@ -5,6 +5,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime
 
 SESSIONS_FILE = Path(__file__).parent / "sessions.json"
+STATE_FILE = Path(__file__).parent / "state.json"
 
 @dataclass
 class Session:
@@ -25,6 +26,7 @@ class SessionManager:
         self.current_session: Session | None = None
         self._sessions: dict[str, Session] = {}
         self._load()
+        self._load_state()
 
     def _load(self):
         if SESSIONS_FILE.exists():
@@ -35,6 +37,22 @@ class SessionManager:
     def _save(self):
         raw = {sid: asdict(s) for sid, s in self._sessions.items()}
         SESSIONS_FILE.write_text(json.dumps(raw, indent=2, ensure_ascii=False))
+        self._save_state()
+
+    def _load_state(self):
+        if STATE_FILE.exists():
+            state = json.loads(STATE_FILE.read_text())
+            self.current_cwd = state.get("current_cwd", self.default_cwd)
+            sid = state.get("current_session_id")
+            if sid and sid in self._sessions:
+                self.current_session = self._sessions[sid]
+
+    def _save_state(self):
+        state = {
+            "current_cwd": self.current_cwd,
+            "current_session_id": self.current_session.session_id if self.current_session else None,
+        }
+        STATE_FILE.write_text(json.dumps(state, ensure_ascii=False))
 
     def new_session(self, name: str | None = None, model: str | None = None) -> Session:
         sid = str(uuid.uuid4())
@@ -86,6 +104,7 @@ class SessionManager:
     def switch_project(self, path: str):
         self.current_cwd = path
         self.current_session = None
+        self._save_state()
 
     def set_mode(self, mode: str):
         if self.current_session:

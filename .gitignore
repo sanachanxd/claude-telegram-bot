@@ -1,0 +1,7 @@
+config.yaml
+sessions.json
+state.json
+logs/
+__pycache__/
+*.pyc
+.DS_Store
