@@ -1,0 +1,23 @@
+telegram:
+  bot_token: "8354951353:AAHZJcXVBBNgE-LEmlMWA2AFPX14zzMLuwU"
+  allowed_user_ids:
+    - 8283571774
+
+proxy:
+  host: "127.0.0.1"
+  port: 10808
+  type: "http"
+
+claude:
+  default_mode: "acceptEdits"
+  timeout: 300
+  default_cwd: "~"
+
+projects:
+  path_blacklist:
+    - "/usr"
+    - "/etc"
+    - "/System"
+    - "/Library"
+    - "/bin"
+    - "/sbin"
