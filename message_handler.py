@@ -39,7 +39,7 @@ def escape_markdown_v2(text: str) -> str:
 
 async def send_thinking(update: Update):
     msg = await update.message.reply_text(
-        "thinking...",
+        "思考中...",
         parse_mode=None,
     )
     await update.message.chat.send_action(ChatAction.TYPING)

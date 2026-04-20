@@ -16,6 +16,8 @@ class Config:
     path_blacklist: list[str] = field(default_factory=lambda: [
         "/usr", "/etc", "/System", "/Library", "/bin", "/sbin"
     ])
+    default_model: str = "claude-sonnet-4-6"
+    available_models: list[dict] = field(default_factory=list)
 
 def load_config() -> Config:
     with open(CONFIG_PATH) as f:
@@ -37,6 +39,10 @@ def load_config() -> Config:
 
     projects_cfg = raw.get("projects", {})
 
+    models_cfg = raw.get("models", {})
+    default_model = models_cfg.get("default", "claude-sonnet-4-6")
+    available_models = models_cfg.get("available", [])
+
     return Config(
         bot_token=token,
         allowed_user_ids=user_ids,
@@ -45,4 +51,6 @@ def load_config() -> Config:
         timeout=claude_cfg.get("timeout", 300),
         default_cwd=default_cwd,
         path_blacklist=projects_cfg.get("path_blacklist", ["/usr", "/etc", "/System", "/Library", "/bin", "/sbin"]),
+        default_model=default_model,
+        available_models=available_models,
     )

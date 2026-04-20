@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 config = load_config()
 runner = ClaudeRunner(timeout=config.timeout)
-sm = SessionManager(default_cwd=config.default_cwd, default_mode=config.default_mode)
+sm = SessionManager(default_cwd=config.default_cwd, default_mode=config.default_mode, default_model=config.default_model)
 
 def auth_required(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -42,22 +42,23 @@ def auth_required(func):
 @auth_required
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
-        "*Project*\n"
-        "/projects - list projects\n"
-        "/switch <name> - switch project\n"
-        "/mkdir <path> [name] - create project dir\n"
-        "/pwd - current directory\n\n"
-        "*Session*\n"
-        "/sessions - list sessions\n"
-        "/resume <id|keyword> - resume session\n"
-        "/continue - continue last session\n"
-        "/fresh - new session\n"
-        "/name <name> - rename session\n\n"
-        "*Control*\n"
-        "/mode [mode] - view/set permission mode\n"
-        "/status - bot status + network\n"
-        "/cancel - abort running command\n"
-        "/help - this message"
+        "*项目管理*\n"
+        "/projects - 列出所有项目\n"
+        "/switch <名称> - 切换项目\n"
+        "/mkdir <路径> - 新建项目目录\n"
+        "/pwd - 当前工作目录\n\n"
+        "*会话管理*\n"
+        "/sessions - 列出当前项目的会话\n"
+        "/resume <ID|关键词> - 恢复会话\n"
+        "/continue - 继续最近的会话\n"
+        "/fresh - 新建会话\n"
+        "/name <名称> - 重命名会话\n\n"
+        "*控制*\n"
+        "/mode [模式] - 查看/切换权限模式\n"
+        "/model [模型] - 查看/切换模型\n"
+        "/status - 查看状态和网络\n"
+        "/cancel - 中断当前任务\n"
+        "/help - 显示帮助"
     )
     await update.message.reply_text(text, parse_mode="Markdown")
 
@@ -76,12 +77,12 @@ async def cmd_projects(update: Update, context: ContextTypes.DEFAULT_TYPE):
             lines = [f"{'> ' if p == sm.current_cwd else '  '}`{p}`" for p in projects]
             await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
             return
-    await update.message.reply_text("No projects found.")
+    await update.message.reply_text("没有找到项目。")
 
 @auth_required
 async def cmd_switch(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("Usage: /switch <path or keyword>")
+        await update.message.reply_text("用法: /switch <路径或关键词>")
         return
     target = " ".join(context.args)
     path = Path(target).expanduser().resolve()
@@ -95,30 +96,30 @@ async def cmd_switch(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     path = Path(p)
                     break
     if not path.is_dir():
-        await update.message.reply_text(f"Directory not found: `{target}`", parse_mode="Markdown")
+        await update.message.reply_text(f"目录不存在: `{target}`", parse_mode="Markdown")
         return
     sm.switch_project(str(path))
-    await update.message.reply_text(f"Switched to `{path}`", parse_mode="Markdown")
+    await update.message.reply_text(f"已切换到 `{path}`", parse_mode="Markdown")
 
 @auth_required
 async def cmd_mkdir(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("Usage: /mkdir <path>")
+        await update.message.reply_text("用法: /mkdir <路径>")
         return
     target = Path(context.args[0]).expanduser().resolve()
     for bl in config.path_blacklist:
         if str(target).startswith(bl):
-            await update.message.reply_text(f"Blocked path: `{bl}`", parse_mode="Markdown")
+            await update.message.reply_text(f"路径被禁止: `{bl}`", parse_mode="Markdown")
             return
     target.mkdir(parents=True, exist_ok=True)
     sm.switch_project(str(target))
-    await update.message.reply_text(f"Created and switched to `{target}`", parse_mode="Markdown")
+    await update.message.reply_text(f"已创建并切换到 `{target}`", parse_mode="Markdown")
 
 @auth_required
 async def cmd_sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sessions = sm.list_sessions()
     if not sessions:
-        await update.message.reply_text("No sessions for this project.")
+        await update.message.reply_text("当前项目没有会话。")
         return
     lines = []
     for s in sessions[:15]:
@@ -130,17 +131,17 @@ async def cmd_sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @auth_required
 async def cmd_resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("Usage: /resume <id or keyword>")
+        await update.message.reply_text("用法: /resume <ID或关键词>")
         return
     keyword = " ".join(context.args)
     session = sm.find_session(keyword)
     if not session:
-        await update.message.reply_text("Session not found.")
+        await update.message.reply_text("未找到会话。")
         return
     sm.current_session = session
     sm.current_cwd = session.project_path
     await update.message.reply_text(
-        f"Resumed `{session.name}` ({session.session_id[:8]})",
+        f"已恢复 `{session.name}` ({session.session_id[:8]})",
         parse_mode="Markdown",
     )
 
@@ -148,11 +149,11 @@ async def cmd_resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_continue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sessions = sm.list_sessions()
     if not sessions:
-        await update.message.reply_text("No sessions to continue.")
+        await update.message.reply_text("没有可继续的会话。")
         return
     sm.current_session = sessions[0]
     await update.message.reply_text(
-        f"Continuing `{sessions[0].name}` ({sessions[0].session_id[:8]})",
+        f"继续会话 `{sessions[0].name}` ({sessions[0].session_id[:8]})",
         parse_mode="Markdown",
     )
 
@@ -160,33 +161,33 @@ async def cmd_continue(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_fresh(update: Update, context: ContextTypes.DEFAULT_TYPE):
     s = sm.new_session()
     await update.message.reply_text(
-        f"New session `{s.name}` ({s.session_id[:8]})",
+        f"新建会话 `{s.name}` ({s.session_id[:8]})",
         parse_mode="Markdown",
     )
 
 @auth_required
 async def cmd_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args or not sm.current_session:
-        await update.message.reply_text("Usage: /name <new name> (need active session)")
+        await update.message.reply_text("用法: /name <新名称>（需要活跃会话）")
         return
     new_name = " ".join(context.args)
     sm.current_session.name = new_name
     sm._save()
-    await update.message.reply_text(f"Session renamed to `{new_name}`", parse_mode="Markdown")
+    await update.message.reply_text(f"会话已重命名为 `{new_name}`", parse_mode="Markdown")
 
 @auth_required
 async def cmd_mode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     valid_modes = ["plan", "acceptEdits", "bypassPermissions"]
     if not context.args:
         mode = sm.current_session.permission_mode if sm.current_session else config.default_mode
-        await update.message.reply_text(f"Current mode: `{mode}`\nAvailable: {', '.join(valid_modes)}", parse_mode="Markdown")
+        await update.message.reply_text(f"当前模式: `{mode}`\nAvailable: {', '.join(valid_modes)}", parse_mode="Markdown")
         return
     mode = context.args[0]
     if mode not in valid_modes:
-        await update.message.reply_text(f"Invalid mode. Available: {', '.join(valid_modes)}")
+        await update.message.reply_text(f"无效模式。可用: {', '.join(valid_modes)}")
         return
     sm.set_mode(mode)
-    await update.message.reply_text(f"Mode set to `{mode}`", parse_mode="Markdown")
+    await update.message.reply_text(f"模式已切换为 `{mode}`", parse_mode="Markdown")
 
 @auth_required
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -206,13 +207,13 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         net_ok = False
 
-    net_status = "online" if net_ok else "offline"
+    net_status = "在线" if net_ok else "离线"
     text = (
-        f"Project: `{sm.current_cwd}`\n"
-        f"Session: {session_info}\n"
-        f"Mode: `{mode}`\n"
-        f"Network: {net_status} (proxy: {config.proxy_url})\n"
-        f"Claude running: {'yes' if runner.is_running else 'no'}"
+        f"项目: `{sm.current_cwd}`\n"
+        f"会话: {session_info}\n"
+        f"模式: `{mode}`\n"
+        f"网络: {net_status} (proxy: {config.proxy_url})\n"
+        f"Claude运行中: {'是' if runner.is_running else '否'}"
     )
     await update.message.reply_text(text, parse_mode="Markdown")
 
@@ -220,9 +221,9 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if runner.is_running:
         await runner.cancel()
-        await update.message.reply_text("Cancelled.")
+        await update.message.reply_text("已中断。")
     else:
-        await update.message.reply_text("Nothing running.")
+        await update.message.reply_text("没有正在运行的任务。")
 
 @auth_required
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -241,6 +242,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         session_id=sm.current_session.session_id,
         session_name=sm.current_session.name,
         permission_mode=sm.current_session.permission_mode,
+        model=sm.current_session.model,
     )
 
     if result.session_id != sm.current_session.session_id:
@@ -254,6 +256,27 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await send_error(update, result.error, thinking_msg)
     else:
         await send_response(update, result.text, thinking_msg)
+
+@auth_required
+async def cmd_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        current = sm.current_session.model if sm.current_session else config.default_model
+        lines = [f"当前模型: `{current}`\n", "可用模型:"]
+        for m in config.available_models:
+            marker = ">" if m["id"] == current else " "
+            lines.append(f"{marker} `{m['name']}` - {m['desc']}")
+        await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+        return
+    target = context.args[0].lower()
+    for m in config.available_models:
+        if target == m["name"] or target == m["id"]:
+            if sm.current_session:
+                sm.current_session.model = m["id"]
+                sm._save()
+            await update.message.reply_text(f"模型已切换为 `{m['name']}` ({m['desc']})", parse_mode="Markdown")
+            return
+    names = ", ".join(m["name"] for m in config.available_models)
+    await update.message.reply_text(f"未知模型。可用: {names}")
 
 def main():
     (Path(__file__).parent / "logs").mkdir(exist_ok=True)
@@ -278,6 +301,7 @@ def main():
     app.add_handler(CommandHandler("fresh", cmd_fresh))
     app.add_handler(CommandHandler("name", cmd_name))
     app.add_handler(CommandHandler("mode", cmd_mode))
+    app.add_handler(CommandHandler("model", cmd_model))
     app.add_handler(CommandHandler("status", cmd_status))
     app.add_handler(CommandHandler("cancel", cmd_cancel))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

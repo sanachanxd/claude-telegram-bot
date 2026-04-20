@@ -14,11 +14,13 @@ class Session:
     created_at: str
     last_active: str
     permission_mode: str = "acceptEdits"
+    model: str = "claude-sonnet-4-6"
 
 class SessionManager:
-    def __init__(self, default_cwd: str, default_mode: str):
+    def __init__(self, default_cwd: str, default_mode: str, default_model: str = "claude-sonnet-4-6"):
         self.default_cwd = default_cwd
         self.default_mode = default_mode
+        self.default_model = default_model
         self.current_cwd: str = default_cwd
         self.current_session: Session | None = None
         self._sessions: dict[str, Session] = {}
@@ -34,7 +36,7 @@ class SessionManager:
         raw = {sid: asdict(s) for sid, s in self._sessions.items()}
         SESSIONS_FILE.write_text(json.dumps(raw, indent=2, ensure_ascii=False))
 
-    def new_session(self, name: str | None = None) -> Session:
+    def new_session(self, name: str | None = None, model: str | None = None) -> Session:
         sid = str(uuid.uuid4())
         now = datetime.now().isoformat()
         project_name = Path(self.current_cwd).name or "home"
@@ -46,6 +48,7 @@ class SessionManager:
             created_at=now,
             last_active=now,
             permission_mode=self.default_mode,
+            model=model or self.default_model,
         )
         self._sessions[sid] = s
         self.current_session = s
@@ -87,4 +90,9 @@ class SessionManager:
     def set_mode(self, mode: str):
         if self.current_session:
             self.current_session.permission_mode = mode
+            self._save()
+
+    def set_model(self, model: str):
+        if self.current_session:
+            self.current_session.model = model
             self._save()

@@ -21,3 +21,16 @@ projects:
     - "/Library"
     - "/bin"
     - "/sbin"
+
+models:
+  default: "claude-sonnet-4-6"
+  available:
+    - name: "sonnet"
+      id: "claude-sonnet-4-6"
+      desc: "Sonnet 4.6 快速"
+    - name: "opus"
+      id: "claude-opus-4-7"
+      desc: "Opus 4.7 最强"
+    - name: "haiku"
+      id: "claude-haiku-4-5-20251001"
+      desc: "Haiku 4.5 轻量"

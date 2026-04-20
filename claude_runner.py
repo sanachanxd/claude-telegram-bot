@@ -26,6 +26,7 @@ class ClaudeRunner:
         session_id: str | None = None,
         session_name: str | None = None,
         permission_mode: str = "acceptEdits",
+        model: str | None = None,
         resume: bool = False,
         continue_last: bool = False,
     ) -> RunResult:
@@ -35,6 +36,9 @@ class ClaudeRunner:
             "--verbose",
             "--permission-mode", permission_mode,
         ]
+
+        if model:
+            cmd.extend(["--model", model])
 
         if session_id and not continue_last and not resume:
             cmd.extend(["--session-id", session_id])
