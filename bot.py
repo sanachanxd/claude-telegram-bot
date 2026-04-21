@@ -239,6 +239,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not prompt:
         return
 
+    if runner.is_running:
+        await update.message.reply_text("正在处理上一条消息，请稍候...")
+        return
+
     if not sm.current_session:
         sm.new_session()
 
