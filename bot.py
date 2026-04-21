@@ -3,6 +3,7 @@ import logging
 import os
 import subprocess
 from pathlib import Path
+from logging.handlers import RotatingFileHandler
 
 from telegram import Update, BotCommand
 from telegram.ext import (
@@ -18,11 +19,18 @@ from claude_runner import ClaudeRunner
 from session_manager import SessionManager
 from message_handler import send_thinking, send_response, send_error, smart_split
 
+log_dir = Path(__file__).parent / "logs"
+log_dir.mkdir(exist_ok=True)
+
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     level=logging.INFO,
     handlers=[
-        logging.FileHandler(Path(__file__).parent / "logs" / "bot.log"),
+        RotatingFileHandler(
+            log_dir / "bot.log",
+            maxBytes=5 * 1024 * 1024,
+            backupCount=3,
+        ),
         logging.StreamHandler(),
     ],
 )

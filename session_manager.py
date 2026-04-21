@@ -1,11 +1,42 @@
 import json
 import uuid
+import tempfile
+import logging
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
+
 SESSIONS_FILE = Path(__file__).parent / "sessions.json"
 STATE_FILE = Path(__file__).parent / "state.json"
+
+
+def _atomic_write(path: Path, data: str):
+    fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+    try:
+        with open(fd, "w") as f:
+            f.write(data)
+        Path(tmp).replace(path)
+    except Exception:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+
+
+def _safe_load_json(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning(f"文件损坏，重置: {path} ({e})")
+        backup = path.with_suffix(".json.bak")
+        try:
+            path.rename(backup)
+            logger.info(f"已备份损坏文件到: {backup}")
+        except OSError:
+            pass
+        return {}
 
 @dataclass
 class Session:
@@ -29,30 +60,31 @@ class SessionManager:
         self._load_state()
 
     def _load(self):
-        if SESSIONS_FILE.exists():
-            raw = json.loads(SESSIONS_FILE.read_text())
-            for sid, data in raw.items():
+        raw = _safe_load_json(SESSIONS_FILE)
+        for sid, data in raw.items():
+            try:
                 self._sessions[sid] = Session(**data)
+            except (TypeError, KeyError):
+                logger.warning(f"跳过损坏的会话: {sid}")
 
     def _save(self):
         raw = {sid: asdict(s) for sid, s in self._sessions.items()}
-        SESSIONS_FILE.write_text(json.dumps(raw, indent=2, ensure_ascii=False))
+        _atomic_write(SESSIONS_FILE, json.dumps(raw, indent=2, ensure_ascii=False))
         self._save_state()
 
     def _load_state(self):
-        if STATE_FILE.exists():
-            state = json.loads(STATE_FILE.read_text())
-            self.current_cwd = state.get("current_cwd", self.default_cwd)
-            sid = state.get("current_session_id")
-            if sid and sid in self._sessions:
-                self.current_session = self._sessions[sid]
+        state = _safe_load_json(STATE_FILE)
+        self.current_cwd = state.get("current_cwd", self.default_cwd)
+        sid = state.get("current_session_id")
+        if sid and sid in self._sessions:
+            self.current_session = self._sessions[sid]
 
     def _save_state(self):
         state = {
             "current_cwd": self.current_cwd,
             "current_session_id": self.current_session.session_id if self.current_session else None,
         }
-        STATE_FILE.write_text(json.dumps(state, ensure_ascii=False))
+        _atomic_write(STATE_FILE, json.dumps(state, ensure_ascii=False))
 
     def new_session(self, name: str | None = None, model: str | None = None) -> Session:
         sid = str(uuid.uuid4())

@@ -2,8 +2,11 @@ import asyncio
 import json
 import uuid
 import signal
+import logging
 from pathlib import Path
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -102,9 +105,22 @@ class ClaudeRunner:
             await self.cancel()
             return RunResult(text="", session_id=session_id or "", cost_usd=0, error="timeout")
         except Exception as e:
-            return RunResult(text="", session_id=session_id or "", cost_usd=0, error=str(e))
+            logger.exception("Claude runner error")
+            return RunResult(text="", session_id=session_id or "", cost_usd=0, error="内部错误，请重试")
         finally:
-            self._process = None
+            await self._cleanup()
+
+    async def _cleanup(self):
+        if self._process and self._process.returncode is None:
+            try:
+                self._process.send_signal(signal.SIGTERM)
+                await asyncio.wait_for(self._process.wait(), timeout=3)
+            except (asyncio.TimeoutError, ProcessLookupError):
+                try:
+                    self._process.kill()
+                except ProcessLookupError:
+                    pass
+        self._process = None
 
     async def cancel(self):
         if self._process and self._process.returncode is None:
