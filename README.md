@@ -19,27 +19,47 @@
 git clone <this-repo> ~/claude-telegram-bot
 cd ~/claude-telegram-bot
 pip3 install -r requirements.txt
-cp config.yaml.example config.yaml
-chmod 600 config.yaml
 ```
 
-编辑 `config.yaml`，填入：
-- Telegram Bot Token（从 @BotFather 获取）
-- 你的 Telegram User ID（从 @userinfobot 获取）
-- 代理地址（如需要）
+## 配置与管理
 
-## 使用
+运行交互式管理面板：
 
 ```bash
-# 手动启动
-python3 bot.py
-
-# 安装为系统服务（开机自启）
-python3 manage.py install
-
-# 管理服务
-python3 manage.py stop / start / restart / uninstall
+python3 manage.py
 ```
+
+```
+╭─────────────────────────╮
+│   Claude Telegram Bot   │
+├─────────────────────────┤
+│  1. 启动 Bot            │
+│  2. 停止 Bot            │
+│  3. 重启 Bot            │
+│  4. 查看状态            │
+│  5. 配置 Token          │
+│  6. 查看日志            │
+│  7. 清理 Git 泄露历史   │
+│  0. 退出                │
+╰─────────────────────────╯
+```
+
+也支持命令行直接调用：
+
+```bash
+python3 manage.py start    # 启动
+python3 manage.py stop     # 停止
+python3 manage.py restart  # 重启
+python3 manage.py status   # 查看状态
+python3 manage.py config   # 配置 Token
+python3 manage.py install  # 安装为系统服务
+```
+
+Token 存储在 `.env` 文件中（权限 600，不进版本控制），通过管理面板的「配置 Token」选项设置。
+
+`config.yaml` 中配置其他选项：
+- 你的 Telegram User ID（从 @userinfobot 获取）
+- 代理地址（如需要）
 
 ## Telegram 命令
 

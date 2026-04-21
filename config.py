@@ -4,6 +4,16 @@ from pathlib import Path
 from dataclasses import dataclass, field
 
 CONFIG_PATH = Path(__file__).parent / "config.yaml"
+ENV_PATH = Path(__file__).parent / ".env"
+
+
+def _load_dotenv():
+    if ENV_PATH.exists():
+        for line in ENV_PATH.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
 @dataclass
 class Config:
@@ -20,6 +30,7 @@ class Config:
     available_models: list[dict] = field(default_factory=list)
 
 def load_config() -> Config:
+    _load_dotenv()
     with open(CONFIG_PATH) as f:
         raw = yaml.safe_load(f)
 

@@ -1,4 +1,5 @@
 config.yaml
+.env
 sessions.json
 state.json
 logs/
